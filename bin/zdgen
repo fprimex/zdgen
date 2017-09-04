@@ -164,6 +164,7 @@ def parse_docs(apidocs, doc_files):
 
     api_items = {}
     duplicate_api_items = {}
+    attribute_items = {}
 
     for doc_file in doc_files:
         if '.orig' in doc_file or doc_file in skipfiles:
@@ -171,6 +172,41 @@ def parse_docs(apidocs, doc_files):
 
         with open(doc_file) as doc:
             soup = BeautifulSoup(doc, "html.parser")
+
+        category_name = soup.h2.get_text(strip=True).lower().replace(' api', '').replace(' ', '_')
+
+        item_name = inflection.singularize(
+                soup.h3.get_text(strip=True).lower().replace(' ', '_'))
+
+        # We want help_center_article, don't want core_ticket, don't
+        # want chat_chat.
+        if category_name != 'core' and item_name != category_name:
+            item_name = category_name + '_' + item_name
+
+        # NPS has this symbol
+        item_name = item_name.replace('®', '')
+
+        json_anchor = soup.find('a', class_='doc-anchor-link',
+                                href='#json-format')
+        if json_anchor:
+            for sibling in json_anchor.next_siblings:
+                if sibling.name == 'table' and sibling.thead and sibling.tbody:
+                    name = []
+                    attributes = {}
+                    for heading in sibling.thead('th'):
+                        htext = heading.get_text(strip=True).lower().replace(' ', '-')
+                        name.append(htext)
+
+                    for row in sibling.tbody('tr'):
+                        a = {}
+                        for i, data in enumerate(row('td')):
+                            a[name[i]] = data.get_text(strip=True)
+                        if 'name' in a:
+                            attributes[a['name']] = a
+
+                    if attributes:
+                        attribute_items[item_name] = attributes
+                    break
 
         for tag in soup.find_all(code_pre_docanchor):
             if tag.name == 'a':

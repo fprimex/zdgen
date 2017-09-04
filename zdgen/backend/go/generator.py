@@ -25,7 +25,7 @@ def hump(w):
             humped.append(l.capitalize() or '_')
     return ''.join(humped)
 
-def generate(api_items, duplicate_api_items, dupe_info):
+def generate(api_items, duplicate_api_items, dupe_info, attribute_items):
     content = ''
 
     for name in sorted(list(api_items.keys())):
@@ -89,5 +89,13 @@ def generate(api_items, duplicate_api_items, dupe_info):
 
         content += '\treturn c.Request("{}", path, ro)\n}}\n\n'.format(item['method'])
 
-    return ('zdesk_api.go', content)
+        structs = ''
+        for item_name in attribute_items:
+            for aname, aproperties in attribute_items[item_name].items():
+                structs += 'type {} struct'
+                print('{}.{}'.format(item_name, aname))
+                for aproperty_name, aproperty in aproperties.items():
+                    print('  {}: {}'.format(aproperty_name, aproperty)) 
+
+    return (('zdesk_api.go', content), ('zdesk_structs.go', structs))
 
